@@ -1,5 +1,5 @@
 <template>
-<div>
+<div class="main">
         <h1>Add</h1>
         <router-link to="/">Back</router-link>
         <form ref="glosForm">
@@ -10,9 +10,11 @@
                 </datalist>
                 <h2>Pairs</h2>
                 <table>
-                        <tr v-for="n in rows" v-bind:key="n"><td><input name="a[]" type="text"></td><td><input v-on:keydown.tab="addRow(n)" name="b[]" type="text"></td></tr>
+                        <tr v-for="n in rows" v-bind:key="n"><td>{{ n }}</td><td><input v-bind:ref="'a' + n" class="halfpair" name="a[]" type="text"></td><td><input class="halfpair" v-bind:ref="'b' + n" v-on:keydown.tab="addRow(n)" name="b[]" type="text"></td></tr>
                 </table>
-                <button v-on:click.prevent="addRow()">Add row</button>
+                <div class="g-recaptcha" data-sitekey="6LcvM3cUAAAAAHVvDTd9rMeda0MeLivlFHVkWDDy"></div>
+                Password<input name="password"><br>
+                <button v-on:click.prevent="addRow(rows)">Add row</button>
                 <button v-on:click.prevent="save()">Save</button><br>
         </form>
 </div>
@@ -42,13 +44,32 @@ export default {
                 addRow(n) {
                         if (n === this.rows) {
                                 this.rows++
+
+                                // Set focus on the added element
+                                var refs = this.$refs
+                                var rows = this.rows
+                                setTimeout(function() {
+                                        refs['a' + rows][0].focus()
+                                }, 100)
+                                this.check(refs['b' + (rows - 1)][0].value)
                         }
                 },
                 save() {
                         var formData = new FormData(this.$refs.glosForm)
                         this.$http.post('/cgi/save.php', formData, {emulateJSON: true}).then(response => {
+                                if (response.body === 0) {
+                                        this.rows = 1
+                                } else {
+                                        alert(response.body)
+                                }
                                 console.log(response)
-                                this.rows = 1
+                        }, response => {
+                                console.log(response)
+                        })
+                },
+                check(b) {
+                        this.$http.get('/cgi/get.php', {params: {stuff: 'similar', b: b}}).then(response => {
+                                console.log(response)
                         }, response => {
                                 console.log(response)
                         })
@@ -57,8 +78,14 @@ export default {
 }
 </script>
 <style scoped>
+div.main {
+        width: 70%;
+        margin: 0 auto;
+}
+input.halfpair {
+        width: 100%;
+}
 table {
-        margin-left: auto;
-        margin-right: auto;
+        width: 100%;
 }
 </style>

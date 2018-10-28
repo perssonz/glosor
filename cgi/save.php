@@ -2,7 +2,38 @@
 
 require_once("settings.php");
 
-if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
+if (isset($_POST["g-recaptcha-response"]) && check_recaptcha($recaptcha_secret, $_POST["g-recaptcha-response"], $_SERVER["REMOTE_ADDR"])) {
+        if (isset($_POST["password"]) && $_POST["password"] == $add_password) {
+                if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
+                        save_glosor($_POST["category"], $_POST["a"], $_POST["b"], $servername, $username, $password, $database);
+                        echo "0";
+                }
+        }
+}
+
+function check_recaptcha($recaptcha_secret, $response, $remoteip) {
+        $url = "https://www.google.com/recaptcha/api/siteverify";
+        $data = array("secret" => $recaptcha_secret, "response" => $response, "remoteip" => $remoteip);
+
+        // use key 'http' even if you send the request to https://...
+        $options = array(
+            'http' => array(
+                'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+                'method'  => 'POST',
+                'content' => http_build_query($data)
+            )
+        );
+        $context  = stream_context_create($options);
+        $result = file_get_contents($url, false, $context);
+        if ($result === FALSE) {
+                die("Captcha check error.");
+        }
+
+        $result = json_decode($result);
+        return $result->success;
+}
+
+function save_glosor($post_category, $post_a, $post_b, $servername, $username, $password, $database) {
         $conn = new mysqli($servername, $username, $password, $database);
         // Check connection
         if ($conn->connect_error) {
@@ -51,13 +82,14 @@ if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
         $category_parent = 0;
         $stmt = $conn->prepare("INSERT INTO " . TBL_CATEGORIES . " (name, parent) VALUES(?, ?)");
         $stmt->bind_param("si", $category_name, $category_parent);
-        $query_check = "SELECT id FROM " . TBL_CATEGORIES . " WHERE name=\"";
 
         $categories = [];
-        for ($i = 0; $i < count($_POST["category"]); $i++) {
-                $category_name = $conn->real_escape_string($_POST["category"][$i]);
-                $rs = $conn->query($query_check . $category_name . "\"");
-                if ($rs && $rs->num_rows > 0) {
+        for ($i = 0; $i < count($post_category); $i++) {
+                $category_name = $conn->real_escape_string($post_category[$i]);
+                $rs = $conn->query("SELECT id FROM " . TBL_CATEGORIES . " WHERE name=\"" . $category_name . "\" AND parent=" . $category_parent);
+                if (!$rs) {
+                        die("Category check failed (" . $conn->errno . ") " . $conn->error);
+                } else if ($rs->num_rows > 0) {
                         $row = $rs->fetch_assoc();
                         $categories[] = intval($row["id"]);
                         $category_parent = intval($row["id"]);
@@ -79,9 +111,9 @@ if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
         $stmt_map = $conn->prepare("INSERT INTO " . TBL_CATEGORIES_GLOSOR_MAP . " (category, glos) VALUES(?, ?)");
         $stmt_map->bind_param("ii", $category, $glos);
 
-        for ($i = 0; $i < count($_POST["a"]); $i++) {
-                $a = $_POST["a"][$i];
-                $b = $_POST["b"][$i];
+        for ($i = 0; $i < count($post_a); $i++) {
+                $a = $post_a[$i];
+                $b = $post_b[$i];
                 $stmt->execute();
                 $glos = $conn->insert_id;
                 foreach ($categories as $category) {
@@ -92,7 +124,5 @@ if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
         $stmt->close();
 
         $conn->close();
-        echo "SUCCESS!";
 }
-
 ?>

@@ -67,6 +67,24 @@ if (isset($_GET["stuff"])) {
                                 echo json_encode($pairs);
                         }
                 }
+        } else if ($_GET["stuff"] == "similar") {
+                if (isset($_GET["b"]) && $_GET["b"] != "") {
+                        $b = $conn->real_escape_string($_GET["b"]);
+                        $word = $b;
+                        $words = explode(" ", $b);
+                        if (count($words) > 1) {
+                                if ($words[0] == "der" || $words[0] == "die" || $words[0] == "das") {
+                                        $word = $words[1];
+                                }
+                        }
+                        $rs = $conn->query("SELECT * FROM " . TBL_GLOSOR . " WHERE b LIKE \"%$word%\"");
+                        if ($rs && $rs->num_rows > 0) {
+                                $row = $rs->fetch_assoc();
+                                echo json_encode($row);
+                        } else {
+                                echo "[]";
+                        }
+                }
         }
 
         $conn->close();
