@@ -68,6 +68,11 @@ if (isset($_GET["stuff"])) {
                         }
                 }
         } else if ($_GET["stuff"] == "similar") {
+                $result = array();
+                $result["bExists"] = false;
+                $result["aExists"] = false;
+                $result["bSimilar"] = "";
+                $result["aSimilar"] = "";
                 if (isset($_GET["b"]) && $_GET["b"] != "") {
                         $b = $conn->real_escape_string($_GET["b"]);
                         $word = $b;
@@ -80,11 +85,26 @@ if (isset($_GET["stuff"])) {
                         $rs = $conn->query("SELECT * FROM " . TBL_GLOSOR . " WHERE b LIKE \"%$word%\"");
                         if ($rs && $rs->num_rows > 0) {
                                 $row = $rs->fetch_assoc();
-                                echo json_encode($row);
-                        } else {
-                                echo "[]";
+                                $result["bExists"] = true;
+                                $result["bSimilar"] = $row["b"];
                         }
                 }
+                if (isset($_GET["a"]) && $_GET["a"] != "") {
+                        $word = $conn->real_escape_string($_GET["a"]);
+                        $words = explode(" ", $word);
+                        if (count($words) > 1) {
+                                if ($words[0] == "der" || $words[0] == "die" || $words[0] == "das") {
+                                        $word = $words[1];
+                                }
+                        }
+                        $rs = $conn->query("SELECT * FROM " . TBL_GLOSOR . " WHERE a LIKE \"%$word%\"");
+                        if ($rs && $rs->num_rows > 0) {
+                                $row = $rs->fetch_assoc();
+                                $result["aExists"] = true;
+                                $result["aSimilar"] = $row["a"];
+                        }
+                }
+                echo json_encode($result);
         }
 
         $conn->close();
