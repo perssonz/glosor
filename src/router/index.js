@@ -24,7 +24,7 @@ export default new Router({
                         path: '/train',
                         name: 'train',
                         component: TheTrain,
-                        props: (route) => ({ category: route.query.c })
+                        props: (route) => ({category: route.query.c, unknown: route.query.u})
                 }
         ]
 })

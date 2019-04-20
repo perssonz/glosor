@@ -56,7 +56,11 @@ if (isset($_GET["stuff"])) {
                         if (ctype_digit($category)) {
                                 $category = intval($category);
                                 $pairs = [];
-                                $rs = $conn->query("SELECT * FROM " . TBL_GLOSOR . " WHERE id IN (SELECT glos FROM " . TBL_CATEGORIES_GLOSOR_MAP . " WHERE category = $category)");
+                                $limit = "";
+                                if (isset($_GET["unknown"]) && intval($_GET["unknown"]) == 1) {
+                                        $limit = " LIMIT 60";
+                                }
+                                $rs = $conn->query("SELECT * FROM " . TBL_GLOSOR . " WHERE id IN (SELECT glos FROM " . TBL_CATEGORIES_GLOSOR_MAP . " WHERE category = $category) ORDER BY known ASC" . $limit);
                                 if ($rs && $rs->num_rows > 0) {
                                         $row = $rs->fetch_assoc();
                                         while ($row) {

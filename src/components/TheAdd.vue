@@ -12,7 +12,7 @@
                 <table>
                         <tr v-for="(pair, index) in pairs" v-bind:key="index"><td>{{ index+1 }}</td><td><input v-model="pair.a" v-bind:ref="'a' + index" class="halfpair" v-tooltip="pair.aSimilar" v-bind:class="{'exists' : pair.aExists}" name="a[]" type="text"></td><td><input class="halfpair" v-bind:class="{'exists' : pair.bExists}" v-tooltip="pair.bSimilar" v-model="pair.b" v-bind:ref="'b' + index" v-on:keydown.tab="addRow(pair)" name="b[]" type="text"></td></tr>
                 </table>
-                <div class="g-recaptcha" data-sitekey="6LcvM3cUAAAAAHVvDTd9rMeda0MeLivlFHVkWDDy"></div>
+                <div class="g-recaptcha" data-sitekey=""></div>
                 Password<input name="password"><br>
                 <button v-on:click.prevent="addRow(rows)">Add row</button>
                 <button v-on:click.prevent="save()">Save</button><br>
@@ -61,6 +61,7 @@ export default {
                 },
                 save() {
                         var formData = new FormData(this.$refs.glosForm)
+                        formData.append('stuff', 'glosor')
                         this.$http.post('/cgi/save.php', formData, {emulateJSON: true}).then(response => {
                                 if (response.body === 0) {
                                         this.pairs = [{a: '', b: '', aExists: false, bExists: false, aSimilar: '', bSimilar: ''}]

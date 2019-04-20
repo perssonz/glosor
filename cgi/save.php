@@ -3,10 +3,18 @@
 require_once("settings.php");
 
 if (isset($_POST["g-recaptcha-response"]) && check_recaptcha($recaptcha_secret, $_POST["g-recaptcha-response"], $_SERVER["REMOTE_ADDR"])) {
-        if (isset($_POST["password"]) && $_POST["password"] == $add_password) {
-                if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
-                        save_glosor($_POST["category"], $_POST["a"], $_POST["b"], $servername, $username, $password, $database);
-                        echo "0";
+        if (isset($_POST["stuff"])) {
+                $stuff = $_POST["stuff"];
+                if ($stuff == "glosor" && isset($_POST["password"]) && $_POST["password"] == $add_password) {
+                        if (isset($_POST["category"]) && isset($_POST["a"]) && isset($_POST["b"])) {
+                                save_glosor($_POST["category"], $_POST["a"], $_POST["b"], $servername, $username, $password, $database);
+                                echo "0";
+                        }
+                } else if ($stuff == "stats") {
+                        if (isset($_POST["stats"])) {
+                                save_stats($_POST["stats"], $servername, $username, $password, $database);
+                                echo "0";
+                        }
                 }
         }
 }
@@ -47,6 +55,7 @@ function save_glosor($post_category, $post_a, $post_b, $servername, $username, $
                                         id INT NOT NULL AUTO_INCREMENT,
                                         a VARCHAR(500),
                                         b VARCHAR(500),
+                                        known INT,
                                         PRIMARY KEY(id)
                                         )";
         $sql_create_categoriestable = "CREATE TABLE " . TBL_CATEGORIES . " (
@@ -103,7 +112,7 @@ function save_glosor($post_category, $post_a, $post_b, $servername, $username, $
 
         $a = "";
         $b = "";
-        $stmt = $conn->prepare("INSERT INTO " . TBL_GLOSOR . " (a, b) VALUES(?, ?)");
+        $stmt = $conn->prepare("INSERT INTO " . TBL_GLOSOR . " (a, b, known) VALUES(?, ?, 0)");
         $stmt->bind_param("ss", $a, $b);
 
         $category = 0;
@@ -121,6 +130,32 @@ function save_glosor($post_category, $post_a, $post_b, $servername, $username, $
                 }
         }
         $stmt_map->close();
+        $stmt->close();
+
+        $conn->close();
+}
+
+function save_stats($post_stats, $servername, $username, $password, $database) {
+        $conn = new mysqli($servername, $username, $password, $database);
+        // Check connection
+        if ($conn->connect_error) {
+                die("Connection failed: " . $conn->connect_error);
+        }
+        $conn->set_charset("utf8");
+
+        header('Content-type: application/json');
+
+        $known = 0;
+        $id = 0;
+        $stmt = $conn->prepare("UPDATE " . TBL_GLOSOR . " SET known = known + ? WHERE id = ?");
+        $stmt->bind_param("ii", $known, $id);
+
+        foreach ($post_stats as $stat) {
+                $id = intval($stat["id"]);
+                $known = intval($stat["known"]);
+                $stmt->execute();
+        }
+
         $stmt->close();
 
         $conn->close();

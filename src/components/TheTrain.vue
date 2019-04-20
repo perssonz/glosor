@@ -6,13 +6,15 @@
         <h1 v-if="started">{{ a }}</h1>
         <input class="answer" type="text" v-if="started" v-model="answer" v-on:keyup="check()" v-on:keydown.enter="tip()"><br>
         <span v-if="started">{{ tiptext }}</span>
-
+        <form ref="captchaForm">
+                <div class="g-recaptcha" data-sitekey=""></div>
+        </form>
 </div>
 </template>
 <script>
 export default {
         name: 'TheTrain',
-        props: ['category'],
+        props: ['category', 'unknown'],
         data: function() {
                 return {
                         pairs: [],
@@ -21,11 +23,13 @@ export default {
                         index: -1,
                         answer: '',
                         tiptext: '',
-                        deck: []
+                        deck: [],
+                        stats: [],
+                        stats_sent: false
                 }
         },
         created: function() {
-                this.$http.get('/cgi/get.php', {params: {stuff: 'glosor', category: this.category}}).then(response => {
+                this.$http.get('/cgi/get.php', {params: {stuff: 'glosor', category: this.category, unknown: this.unknown}}).then(response => {
                         console.log(response)
                         this.pairs = response.body
                 }, response => {
@@ -53,15 +57,29 @@ export default {
                         }
                 },
                 next: function() {
-                        this.index++
-                        if (this.index < this.deck.length) {
+                        // Save stats, if index higher than number of cards, there has been a previous try.
+                        if (this.tiptext === '' && this.index < this.pairs.length && this.index > -1) {
+                                this.stats.push({id: this.pairs[this.deck[this.index]].id, known: 1})
+                        }
+
+                        if ((this.index + 1) < this.deck.length) {
                                 // Next flashcard
+                                this.index++
                                 this.a = this.pairs[this.deck[this.index]].a
                                 this.answer = ''
                                 this.tiptext = ''
                         } else {
-                                // Done, route back to startpage
-                                this.$router.push('/')
+                                // Done, route back to startpage after saving stats
+                                var formData = new FormData(this.$refs.captchaForm)
+                                var captcha = formData.get('g-recaptcha-response')
+                                this.$http.post('/cgi/save.php', {stuff: 'stats', stats: this.stats, 'g-recaptcha-response': captcha}, {emulateJSON: true}).then(response => {
+                                        console.log(response)
+                                        if (response.body === 0) {
+                                                this.$router.push('/')
+                                        }
+                                }, response => {
+                                        console.log(response)
+                                })
                         }
                 },
                 check: function() {
